@@ -8,7 +8,9 @@ Python utility that extracts key Apple Health metrics from an Apple Health expor
 2. Unzip `export.zip` to get `export.xml` and place it in the same folder as `convert_health_data.py`.
 3. Run the converter from a terminal:
 
-`python convert_health_data.py`
+```
+python convert_health_data.py
+```
 
 After the script finishes you should find the CSV with the data. 
 
