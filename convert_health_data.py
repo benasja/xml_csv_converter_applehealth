@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-"""
-Convert Apple Health export XML files to a single CSV.
-Uses iterparse for memory-efficient processing of large files.
-"""
+
+# Convert Apple Health export.xml and export_cda.xml files into a consolidated CSV file.
 
 import csv
 import os
