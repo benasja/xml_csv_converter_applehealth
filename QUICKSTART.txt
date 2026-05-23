@@ -1,0 +1,31 @@
+Apple Health Coaching Toolkit — Quick start
+============================================
+
+ON YOUR COMPUTER (Mac or Windows)
+---------------------------------
+
+1. Install Python 3 if needed (https://www.python.org/downloads/)
+
+2. Export Apple Health on your iPhone:
+   Health app → profile picture → Export All Health Data
+   Save the zip and unzip it on your computer.
+
+3. Copy export.xml into this folder (same folder as convert_health_data.py).
+
+4. Open Terminal (Mac) or Command Prompt (Windows), cd to this folder, run:
+
+   python3 convert_health_data.py
+
+   On Windows you may need: py convert_health_data.py
+
+5. Your coaching files appear in this folder:
+   - daily_metrics.csv
+   - workout_summary.csv
+   - weekly_summary.csv
+   - full_health_data.csv
+   - available_types.csv
+   - data_quality_report.txt
+
+The sample_output/ folder shows example files from demo data (not your health data).
+
+To re-run with your real export, delete the old CSV files and run step 4 again.
