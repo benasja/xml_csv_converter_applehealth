@@ -8,3 +8,4 @@ available_types.csv
 data_quality_report.txt
 coaching_types_usage.txt
 electrocardiograms/
+__pycache__/
