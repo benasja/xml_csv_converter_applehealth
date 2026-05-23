@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HealthData [
+<!ELEMENT HealthData (ExportDate,Me,(Record|Workout)*)>
+]>
+<HealthData locale="en_US">
+  <ExportDate value="2024-06-02 10:00:00 +0000"/>
+  <Me HKCharacteristicTypeIdentifierDateOfBirth="1990-01-01" HKCharacteristicTypeIdentifierBiologicalSex="HKBiologicalSexMale"/>
+  <Record type="HKQuantityTypeIdentifierStepCount" unit="count" value="5000" sourceName="iPhone" startDate="2024-06-01 20:00:00 +0000" endDate="2024-06-01 20:00:00 +0000"/>
+  <Record type="HKQuantityTypeIdentifierStepCount" unit="count" value="7000" sourceName="iPhone" startDate="2024-06-02 20:00:00 +0000" endDate="2024-06-02 20:00:00 +0000"/>
+  <Record type="HKQuantityTypeIdentifierActiveEnergyBurned" unit="kcal" value="400" sourceName="Apple Watch" startDate="2024-06-01 12:00:00 +0000" endDate="2024-06-01 12:00:00 +0000"/>
+  <Record type="HKQuantityTypeIdentifierBasalEnergyBurned" unit="kcal" value="1500" sourceName="Apple Watch" startDate="2024-06-01 00:00:00 +0000" endDate="2024-06-01 23:59:00 +0000"/>
+  <Record type="HKQuantityTypeIdentifierRestingHeartRate" unit="count/min" value="55" sourceName="Apple Watch" startDate="2024-06-01 08:00:00 +0000" endDate="2024-06-01 08:00:00 +0000"/>
+  <Record type="HKQuantityTypeIdentifierHeartRateVariabilitySDNN" unit="ms" value="45" sourceName="Apple Watch" startDate="2024-06-01 08:30:00 +0000" endDate="2024-06-01 08:30:00 +0000"/>
+  <Record type="HKQuantityTypeIdentifierBodyMass" unit="kg" value="75" sourceName="Health" startDate="2024-06-01 07:00:00 +0000" endDate="2024-06-01 07:00:00 +0000"/>
+  <Record type="HKQuantityTypeIdentifierVO2Max" unit="ml/kg*min" value="42" sourceName="Apple Watch" startDate="2024-06-01 09:00:00 +0000" endDate="2024-06-01 09:00:00 +0000"/>
+  <Record type="HKCategoryTypeIdentifierSleepAnalysis" value="HKCategoryValueSleepAnalysisInBed" sourceName="Apple Watch" startDate="2024-06-01 22:00:00 +0000" endDate="2024-06-02 06:30:00 +0000"/>
+  <Record type="HKCategoryTypeIdentifierSleepAnalysis" value="HKCategoryValueSleepAnalysisAsleepREM" sourceName="Apple Watch" startDate="2024-06-01 23:00:00 +0000" endDate="2024-06-02 01:00:00 +0000"/>
+  <Record type="HKCategoryTypeIdentifierSleepAnalysis" value="HKCategoryValueSleepAnalysisAsleepCore" sourceName="Apple Watch" startDate="2024-06-02 01:00:00 +0000" endDate="2024-06-02 04:00:00 +0000"/>
+  <Record type="HKCategoryTypeIdentifierSleepAnalysis" value="HKCategoryValueSleepAnalysisAsleepDeep" sourceName="Apple Watch" startDate="2024-06-02 04:00:00 +0000" endDate="2024-06-02 06:00:00 +0000"/>
+  <Record type="HKCategoryTypeIdentifierAppleStandHour" value="HKCategoryValueAppleStandHour" sourceName="Apple Watch" startDate="2024-06-01 10:00:00 +0000" endDate="2024-06-01 11:00:00 +0000"/>
+  <Record type="HKQuantityTypeIdentifierHeartRate" unit="count/min" value="120" sourceName="Apple Watch" startDate="2024-06-01 14:00:00 +0000" endDate="2024-06-01 14:05:00 +0000"/>
+  <Record type="HKQuantityTypeIdentifierHeartRate" unit="count/min" value="140" sourceName="Apple Watch" startDate="2024-06-01 14:05:00 +0000" endDate="2024-06-01 14:10:00 +0000"/>
+  <Record type="HKQuantityTypeIdentifierHeartRate" unit="count/min" value="130" sourceName="Apple Watch" startDate="2024-06-01 14:10:00 +0000" endDate="2024-06-01 14:30:00 +0000"/>
+  <Record type="HKQuantityTypeIdentifierCyclingPower" unit="W" value="180" sourceName="Wahoo" startDate="2024-06-01 14:05:00 +0000" endDate="2024-06-01 14:05:00 +0000"/>
+  <Record type="HKQuantityTypeIdentifierCyclingCadence" unit="count/min" value="85" sourceName="Wahoo" startDate="2024-06-01 14:05:00 +0000" endDate="2024-06-01 14:05:00 +0000"/>
+  <Workout workoutActivityType="HKWorkoutActivityTypeCycling" duration="30" durationUnit="min" totalEnergyBurned="250" totalEnergyBurnedUnit="Cal" totalDistance="15" totalDistanceUnit="km" sourceName="Apple Watch" startDate="2024-06-01 14:00:00 +0000" endDate="2024-06-01 14:30:00 +0000">
+    <WorkoutStatistics type="HKQuantityTypeIdentifierHeartRate" average="130" maximum="145" unit="count/min"/>
+    <WorkoutStatistics type="HKQuantityTypeIdentifierActiveEnergyBurned" sum="220" unit="kcal"/>
+    <WorkoutStatistics type="HKQuantityTypeIdentifierCyclingPower" average="175" maximum="220" unit="W"/>
+  </Workout>
+  <Workout workoutActivityType="HKWorkoutActivityTypeTraditionalStrengthTraining" duration="45" durationUnit="min" totalEnergyBurned="180" totalEnergyBurnedUnit="Cal" sourceName="Apple Watch" startDate="2024-06-02 18:00:00 +0000" endDate="2024-06-02 18:45:00 +0000"/>
+</HealthData>

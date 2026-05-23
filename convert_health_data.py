@@ -1,171 +1,23 @@
 #!/usr/bin/env python3
 
-# Convert Apple Health export.xml and export_cda.xml files into a consolidated CSV file.
+"""Convert Apple Health export into flat and coaching-ready CSV outputs."""
 
 import csv
-import os
 import glob
+import os
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
-TARGET_TYPES = {
-    # Activity
-    'HKQuantityTypeIdentifierStepCount',
-    'HKQuantityTypeIdentifierActiveEnergyBurned',
-    # Heart
-    'HKQuantityTypeIdentifierHeartRate',
-    'HKQuantityTypeIdentifierRestingHeartRate',
-    'HKQuantityTypeIdentifierHeartRateVariabilitySDNN',
-    # Sleep
-    'HKCategoryTypeIdentifierSleepAnalysis',
-    # Body Metrics
-    'HKQuantityTypeIdentifierBodyMass',
-    'HKQuantityTypeIdentifierBodyFatPercentage',
-    # Performance & Recovery
-    'HKQuantityTypeIdentifierVO2Max',
-    'HKQuantityTypeIdentifierRespiratoryRate',
-    # Sedentary Monitor
-    'HKCategoryTypeIdentifierAppleStandHour',
-}
+from health_coaching import (
+    COACHING_RECORD_TYPES,
+    ExportData,
+    iter_export_xml,
+    records_to_legacy_rows,
+    write_coaching_outputs,
+)
 
-def parse_export_xml(filepath, records, seen_keys):
-    """Parse export.xml using iterparse for memory efficiency."""
-    print(f"Processing: {filepath}")
-    count = 0
-    local_count = 0
-    workout_count = 0
-    
-    context = ET.iterparse(filepath, events=('end',))
-    
-    for event, elem in context:
-        if elem.tag == 'Record':
-            record_type = elem.get('type')
-            if record_type in TARGET_TYPES:
-                creation_date = elem.get('creationDate', '')
-                start_date = elem.get('startDate', '')
-                end_date = elem.get('endDate', '')
-                value = elem.get('value', '')
-                
-                key = (creation_date, start_date, end_date, record_type, value)
-                if key not in seen_keys:
-                    seen_keys.add(key)
-                    records.append({
-                        'creationDate': creation_date,
-                        'startDate': start_date,
-                        'endDate': end_date,
-                        'type': record_type,
-                        'value': value
-                    })
-                    local_count += 1
-                    count += 1
-                    
-                    if count % 50000 == 0:
-                        print(f"  Progress: {count:,} records extracted...")
-            
-            elem.clear()
-        
-        elif elem.tag == 'Workout':
-            workout_type = elem.get('workoutActivityType', '')
-            creation_date = elem.get('creationDate', '')
-            start_date = elem.get('startDate', '')
-            end_date = elem.get('endDate', '')
-            duration = elem.get('duration', '')
-            duration_unit = elem.get('durationUnit', 'min')
-            total_energy = elem.get('totalEnergyBurned', '')
-            energy_unit = elem.get('totalEnergyBurnedUnit', 'Cal')
-            
-            value_parts = []
-            if duration:
-                value_parts.append(f"duration:{duration} {duration_unit}")
-            if total_energy:
-                value_parts.append(f"calories:{total_energy} {energy_unit}")
-            value = '; '.join(value_parts) if value_parts else ''
-            
-            key = (creation_date, start_date, end_date, workout_type, value)
-            if key not in seen_keys:
-                seen_keys.add(key)
-                records.append({
-                    'creationDate': creation_date,
-                    'startDate': start_date,
-                    'endDate': end_date,
-                    'type': workout_type,
-                    'value': value
-                })
-                workout_count += 1
-                count += 1
-                
-                if count % 50000 == 0:
-                    print(f"  Progress: {count:,} records extracted...")
-            
-            elem.clear()
-    
-    print(f"  Extracted {local_count:,} records + {workout_count:,} workouts from {os.path.basename(filepath)}")
-    return count
 
-def parse_export_cda_xml(filepath, records, seen_keys):
-    """Parse export_cda.xml (HL7 CDA format) using iterparse."""
-    print(f"Processing: {filepath}")
-    count = 0
-    local_count = 0
-    total_count = len(records)
-    
-    ns = {'cda': 'urn:hl7-org:v3'}
-    
-    try:
-        context = ET.iterparse(filepath, events=('end',))
-        
-        for event, elem in context:
-            if elem.tag == '{urn:hl7-org:v3}observation':
-                text_elem = elem.find('cda:text', ns)
-                if text_elem is not None:
-                    type_elem = text_elem.find('cda:type', ns)
-                    if type_elem is not None and type_elem.text in TARGET_TYPES:
-                        record_type = type_elem.text
-                        
-                        value_elem = text_elem.find('cda:value', ns)
-                        value = value_elem.text if value_elem is not None else ''
-                        
-                        effective_time = elem.find('cda:effectiveTime', ns)
-                        start_date = ''
-                        end_date = ''
-                        creation_date = ''
-                        
-                        if effective_time is not None:
-                            low = effective_time.find('cda:low', ns)
-                            high = effective_time.find('cda:high', ns)
-                            if low is not None:
-                                start_date = format_cda_date(low.get('value', ''))
-                            if high is not None:
-                                end_date = format_cda_date(high.get('value', ''))
-                        
-                        creation_date = start_date
-                        
-                        key = (creation_date, start_date, end_date, record_type, value)
-                        if key not in seen_keys:
-                            seen_keys.add(key)
-                            records.append({
-                                'creationDate': creation_date,
-                                'startDate': start_date,
-                                'endDate': end_date,
-                                'type': record_type,
-                                'value': value
-                            })
-                            local_count += 1
-                            count += 1
-                            
-                            if (total_count + count) % 50000 == 0:
-                                print(f"  Progress: {total_count + count:,} records extracted...")
-                
-                elem.clear()
-    except ET.ParseError as e:
-        print(f"  Warning: CDA file has malformed XML, skipping. Error: {e}")
-        print(f"  (export.xml likely contains the same data)")
-    
-    print(f"  Extracted {local_count:,} new records from {os.path.basename(filepath)}")
-    return count
-
-def format_cda_date(date_str):
-    """Convert CDA date format (YYYYMMDDHHMMSS+ZZZZ) to readable format."""
+def format_cda_date(date_str: str) -> str:
     if not date_str:
         return ''
     try:
@@ -181,115 +33,171 @@ def format_cda_date(date_str):
         pass
     return date_str
 
-def parse_ecg_files(ecg_dir, records, seen_keys):
-    """Parse ECG CSV files and extract metadata."""
+
+def parse_export_cda_into_data(filepath: str, data: ExportData) -> int:
+    """Parse export_cda.xml (HL7 CDA) and merge matching records into data."""
+    print(f"Processing: {filepath}")
+    count = 0
+    ns = {'cda': 'urn:hl7-org:v3'}
+
+    try:
+        context = ET.iterparse(filepath, events=('end',))
+        for _event, elem in context:
+            if elem.tag != '{urn:hl7-org:v3}observation':
+                continue
+            text_elem = elem.find('cda:text', ns)
+            if text_elem is None:
+                elem.clear()
+                continue
+            type_elem = text_elem.find('cda:type', ns)
+            if type_elem is None or type_elem.text not in COACHING_RECORD_TYPES:
+                elem.clear()
+                continue
+
+            record_type = type_elem.text
+            data.type_counts[record_type] += 1
+
+            value_elem = text_elem.find('cda:value', ns)
+            value_raw = value_elem.text if value_elem is not None else ''
+
+            effective_time = elem.find('cda:effectiveTime', ns)
+            start_date = ''
+            end_date = ''
+            if effective_time is not None:
+                low = effective_time.find('cda:low', ns)
+                high = effective_time.find('cda:high', ns)
+                if low is not None:
+                    start_date = format_cda_date(low.get('value', ''))
+                if high is not None:
+                    end_date = format_cda_date(high.get('value', ''))
+
+            creation_date = start_date
+            key = (creation_date, start_date, end_date, record_type, value_raw, 'cda')
+            if key in data.seen_record_keys:
+                elem.clear()
+                continue
+            data.seen_record_keys.add(key)
+
+            from health_coaching import HealthRecord, parse_float, parse_health_datetime
+
+            start_dt = parse_health_datetime(start_date)
+            end_dt = parse_health_datetime(end_date)
+            if start_dt and end_dt:
+                numeric = parse_float(value_raw)
+                data.records.append(
+                    HealthRecord(
+                        type=record_type,
+                        value=numeric,
+                        category_value=value_raw if numeric is None else '',
+                        unit='',
+                        source_name='cda',
+                        start=start_dt,
+                        end=end_dt,
+                        creation=creation_date,
+                        start_raw=start_date,
+                        end_raw=end_date,
+                    )
+                )
+                count += 1
+            elem.clear()
+    except ET.ParseError as e:
+        print(f"  Warning: CDA file has malformed XML, skipping. Error: {e}")
+
+    print(f"  Extracted {count:,} new records from {os.path.basename(filepath)}")
+    return count
+
+
+def parse_ecg_legacy(ecg_dir: str, legacy_rows: list, seen_keys: set) -> int:
     print(f"Processing ECG files from: {ecg_dir}")
     count = 0
-    total_count = len(records)
-    
     ecg_files = glob.glob(os.path.join(ecg_dir, 'ecg_*.csv'))
-    
+
     for filepath in ecg_files:
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
-                lines = []
-                for i, line in enumerate(f):
-                    lines.append(line.strip())
-                    if i >= 10:
-                        break
-                
-                metadata = {}
-                for line in lines:
-                    if ',' in line:
-                        parts = line.split(',', 1)
-                        if len(parts) == 2:
-                            key, value = parts[0].strip(), parts[1].strip().strip('"')
-                            metadata[key] = value
-                
-                recorded_date = metadata.get('Recorded Date', '')
-                classification = metadata.get('Classification', '')
-                
-                if recorded_date:
-                    record_key = (recorded_date, recorded_date, recorded_date, 'ECG', classification)
-                    if record_key not in seen_keys:
-                        seen_keys.add(record_key)
-                        records.append({
-                            'creationDate': recorded_date,
-                            'startDate': recorded_date,
-                            'endDate': recorded_date,
-                            'type': 'ECG',
-                            'value': classification
-                        })
-                        count += 1
-                        
-                        if (total_count + count) % 50000 == 0:
-                            print(f"  Progress: {total_count + count:,} records extracted...")
-        except Exception as e:
+                lines = [line.strip() for i, line in enumerate(f) if i <= 10]
+            metadata = {}
+            for line in lines:
+                if ',' in line:
+                    parts = line.split(',', 1)
+                    if len(parts) == 2:
+                        key, value = parts[0].strip(), parts[1].strip().strip('"')
+                        metadata[key] = value
+
+            recorded_date = metadata.get('Recorded Date', '')
+            classification = metadata.get('Classification', '')
+            if not recorded_date:
+                continue
+            record_key = (recorded_date, recorded_date, recorded_date, 'ECG', classification)
+            if record_key in seen_keys:
+                continue
+            seen_keys.add(record_key)
+            legacy_rows.append(
+                {
+                    'creationDate': recorded_date,
+                    'startDate': recorded_date,
+                    'endDate': recorded_date,
+                    'type': 'ECG',
+                    'value': classification,
+                }
+            )
+            count += 1
+        except OSError as e:
             print(f"  Warning: Could not parse {filepath}: {e}")
-    
+
     print(f"  Extracted {count} ECG records")
     return count
 
-def main():
+
+def main() -> None:
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    
     export_xml = os.path.join(base_dir, 'export.xml')
     export_cda_xml = os.path.join(base_dir, 'export_cda.xml')
     ecg_dir = os.path.join(base_dir, 'electrocardiograms')
     output_csv = os.path.join(base_dir, 'full_health_data.csv')
-    
-    records = []
-    seen_keys = set()
-    total_count = 0
-    
-    print("=" * 60)
-    print("Apple Health Data Converter")
-    print("=" * 60)
-    print(f"Target types: {', '.join(sorted(TARGET_TYPES))}")
-    print()
-    
+
+    data = ExportData()
+
+    print('=' * 60)
+    print('Apple Health Data Converter')
+    print('=' * 60)
+
     if os.path.exists(export_xml):
-        total_count += parse_export_xml(export_xml, records, seen_keys)
+        iter_export_xml(export_xml, data)
     else:
         print(f"Warning: {export_xml} not found")
-    
+
     if os.path.exists(export_cda_xml):
-        total_count += parse_export_cda_xml(export_cda_xml, records, seen_keys)
+        parse_export_cda_into_data(export_cda_xml, data)
     else:
         print(f"Warning: {export_cda_xml} not found")
-    
+
+    legacy_rows = records_to_legacy_rows(data)
+    ecg_seen = {(r['creationDate'], r['startDate'], r['endDate'], r['type'], r['value']) for r in legacy_rows}
     if os.path.exists(ecg_dir):
-        total_count += parse_ecg_files(ecg_dir, records, seen_keys)
+        parse_ecg_legacy(ecg_dir, legacy_rows, ecg_seen)
     else:
         print(f"Warning: {ecg_dir} not found")
-    
-    print()
-    print(f"Sorting {len(records):,} records by startDate...")
-    records.sort(key=lambda x: x['startDate'])
-    
-    print(f"Writing to {output_csv}...")
+
+    legacy_rows.sort(key=lambda x: x['startDate'])
+    print(f"\nWriting legacy export: {output_csv}")
     with open(output_csv, 'w', newline='', encoding='utf-8') as f:
-        fieldnames = ['creationDate', 'startDate', 'endDate', 'type', 'value']
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=['creationDate', 'startDate', 'endDate', 'type', 'value'])
         writer.writeheader()
-        writer.writerows(records)
-    
+        writer.writerows(legacy_rows)
+
+    print('\nBuilding coaching-ready outputs...')
+    coaching_paths = write_coaching_outputs(base_dir, data)
+
     print()
-    print("=" * 60)
-    print("COMPLETE")
-    print("=" * 60)
-    print(f"Total records written: {len(records):,}")
-    print(f"Output file: {output_csv}")
-    
-    type_counts = {}
-    for r in records:
-        t = r['type']
-        type_counts[t] = type_counts.get(t, 0) + 1
-    
-    print("\nRecords by type:")
-    for t in sorted(type_counts.keys()):
-        print(f"  {t}: {type_counts[t]:,}")
+    print('=' * 60)
+    print('COMPLETE')
+    print('=' * 60)
+    print(f"Legacy rows: {len(legacy_rows):,} -> {output_csv}")
+    for name, path in coaching_paths.items():
+        print(f"  {name}: {path}")
+    print(f"\nSee {coaching_paths['data_quality_report']} for type coverage and missingness.")
+
 
 if __name__ == '__main__':
     main()
-
