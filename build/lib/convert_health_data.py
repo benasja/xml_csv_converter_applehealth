@@ -6,7 +6,6 @@ import argparse
 import csv
 import glob
 import os
-import sys
 import xml.etree.ElementTree as ET
 import zipfile
 from datetime import datetime
@@ -168,9 +167,6 @@ def build_parser() -> argparse.ArgumentParser:
                    help='Age, used to sanity-check max HR when no higher value was recorded.')
     p.add_argument('--skip-legacy', action='store_true',
                    help='Skip the large flat full_health_data.csv (much faster).')
-    p.add_argument('--print-schedule', action='store_true',
-                   help='Print a ready-to-install monthly scheduled job for this OS '
-                        '(launchd / systemd / Task Scheduler), then exit.')
     p.add_argument('--force-extract', action='store_true',
                    help='Re-extract from the zip even if a current extraction is cached.')
     p.add_argument('--include-cda', action='store_true',
@@ -186,16 +182,6 @@ def main() -> None:
 
     requested = args.data_dir or os.path.dirname(os.path.abspath(__file__))
     out_dir = os.path.abspath(args.out_dir or requested)
-
-    if args.print_schedule:
-        print(health_ingest.schedule_instructions(
-            python=sys.executable,
-            script=os.path.abspath(__file__),
-            watch=os.path.abspath(os.path.expanduser(requested)),
-            out=out_dir,
-            platform_name=sys.platform))
-        return
-
     if os.path.isfile(out_dir):
         out_dir = os.path.dirname(out_dir)
     os.makedirs(out_dir, exist_ok=True)
